@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["id", "name", "author", "date", "category", "target", "attack", "why_dangerous", "expected_action"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique ID: author_NNN format"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable attack name"
+    },
+    "author": {
+      "type": "string",
+      "description": "GitHub handle of the contributor"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Submission date (YYYY-MM-DD)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "path_traversal", "ssrf", "command_injection", "header_injection",
+        "payload_regex", "encoding_bypass", "prompt_injection",
+        "credential_theft", "data_exfiltration", "supply_chain",
+        "privilege_escalation", "social_engineering"
+      ]
+    },
+    "target": {
+      "type": "string",
+      "enum": ["stage1", "stage2", "both"],
+      "description": "Which defense layer this attack targets"
+    },
+    "attack": {
+      "type": "object",
+      "required": ["method", "path", "body"],
+      "properties": {
+        "method": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]},
+        "path": {"type": "string"},
+        "headers": {"type": "object", "additionalProperties": {"type": "string"}},
+        "body": {"type": "string"}
+      }
+    },
+    "why_dangerous": {
+      "type": "string",
+      "description": "Explain the real-world risk of this attack"
+    },
+    "expected_action": {
+      "type": "string",
+      "enum": ["block", "pass"],
+      "description": "What should happen: 'block' for attacks, 'pass' for false-positive tests"
+    },
+    "patched": {
+      "type": "object",
+      "properties": {
+        "version": {"type": "string"},
+        "date": {"type": "string", "format": "date"},
+        "fix": {"type": "string"}
+      },
+      "description": "Added when AgentGuard patches this bypass"
+    }
+  }
+}

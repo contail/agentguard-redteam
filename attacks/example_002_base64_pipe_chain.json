@@ -1,0 +1,21 @@
+{
+  "id": "example_002",
+  "name": "Base64-Encoded Command in Pipe Chain",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "encoding_bypass",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"echo cm0gLXJmIC8= | base64 -d | bash\"}"
+  },
+  "why_dangerous": "Base64-encoded 'rm -rf /' embedded in a pipe chain. Previous Stage 1 only decoded the entire body as base64, not individual tokens within the text.",
+  "expected_action": "block",
+  "patched": {
+    "version": "1.2.0",
+    "date": "2026-03-06",
+    "fix": "Added extractAndDecodeBase64Tokens() to scan for embedded base64 strings within text"
+  }
+}

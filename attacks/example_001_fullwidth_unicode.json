@@ -1,0 +1,21 @@
+{
+  "id": "example_001",
+  "name": "Fullwidth Unicode Command Injection",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "encoding_bypass",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"\\uff52\\uff4d\\u3000-\\uff52\\uff46\\u3000/\"}"
+  },
+  "why_dangerous": "Fullwidth Unicode chars (U+FF52=r, U+FF4D=m) and ideographic space (U+3000) bypass ASCII-based command pattern matching. The command 'rm -rf /' is hidden in fullwidth form.",
+  "expected_action": "block",
+  "patched": {
+    "version": "1.2.0",
+    "date": "2026-03-06",
+    "fix": "Added ideographic space (U+3000) and Unicode whitespace normalization in normalizeUnicode()"
+  }
+}
