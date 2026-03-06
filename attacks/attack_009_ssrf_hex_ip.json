@@ -1,0 +1,16 @@
+{
+  "id": "attack_009",
+  "name": "SSRF via Hex-Encoded Localhost IP",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "ssrf",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"url\": \"http://0x7f000001:18789/\"}"
+  },
+  "why_dangerous": "0x7f000001 is the hex representation of 127.0.0.1. Bypasses string-based localhost detection to access internal services.",
+  "expected_action": "block"
+}

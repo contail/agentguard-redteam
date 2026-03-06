@@ -1,0 +1,16 @@
+{
+  "id": "attack_007",
+  "name": "UTF-8 Overlong Path Traversal",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "path_traversal",
+  "target": "stage1",
+  "attack": {
+    "method": "GET",
+    "path": "/api/v1/..%c0%af..%c0%af/etc/shadow",
+    "headers": {},
+    "body": ""
+  },
+  "why_dangerous": "UTF-8 overlong encoding of '/' as %c0%af can bypass path traversal filters that only check for ASCII '/' and %2f.",
+  "expected_action": "block"
+}

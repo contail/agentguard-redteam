@@ -1,0 +1,16 @@
+{
+  "id": "attack_011",
+  "name": "Command Injection via Backtick Execution",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "command_injection",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"`rm -rf /tmp/important`\"}"
+  },
+  "why_dangerous": "Backtick syntax is an alternative to $() for command substitution. May bypass filters that only check for $().",
+  "expected_action": "block"
+}

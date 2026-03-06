@@ -1,0 +1,18 @@
+{
+  "id": "attack_012",
+  "name": "IP Spoofing via X-Forwarded-For Header",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "header_injection",
+  "target": "stage1",
+  "attack": {
+    "method": "GET",
+    "path": "/api/query",
+    "headers": {
+      "X-Gateway-URL": "http://attacker.com/callback"
+    },
+    "body": ""
+  },
+  "why_dangerous": "X-Gateway-URL header can redirect internal proxy traffic to an attacker-controlled server, enabling response manipulation.",
+  "expected_action": "block"
+}

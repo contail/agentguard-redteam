@@ -1,0 +1,16 @@
+{
+  "id": "attack_006",
+  "name": "Double URL-Encoded Path Traversal",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "path_traversal",
+  "target": "stage1",
+  "attack": {
+    "method": "GET",
+    "path": "/api/v1/%252e%252e/%252e%252e/etc/passwd",
+    "headers": {},
+    "body": ""
+  },
+  "why_dangerous": "Double URL encoding (%25 -> %) bypasses first-pass URL decode. After two rounds of decoding, resolves to ../../etc/passwd.",
+  "expected_action": "block"
+}

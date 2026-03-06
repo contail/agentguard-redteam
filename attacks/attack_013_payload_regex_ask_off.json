@@ -1,0 +1,16 @@
+{
+  "id": "attack_013",
+  "name": "Security Config Manipulation: ask=off",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "payload_regex",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"ask\": \"off\"}"
+  },
+  "why_dangerous": "Attempts to disable agent confirmation prompts (exec.ask=off). Allows silent execution of dangerous commands.",
+  "expected_action": "block"
+}

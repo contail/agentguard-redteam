@@ -1,0 +1,16 @@
+{
+  "id": "attack_008",
+  "name": "SSRF via AWS IMDS Metadata Endpoint",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "ssrf",
+  "target": "stage1",
+  "attack": {
+    "method": "GET",
+    "path": "/api/query?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+    "headers": {},
+    "body": ""
+  },
+  "why_dangerous": "Accesses AWS Instance Metadata Service to steal IAM credentials. Cloud-native SSRF attack vector.",
+  "expected_action": "block"
+}

