@@ -13,8 +13,9 @@ Submit payload  ───────────────►  Stage 1: Rule-
   in attacks/                       Path traversal, SSRF, command injection,
                                     header injection, payload regex, base64,
                                     Unicode normalization, form-encoded, ...
-                ───────────────►  Stage 2: AI Judge via mlx-lm (local)
-                                    Detect (Qwen3-0.6B × 6 LoRA) → Route → Judge (Qwen3-8B + LoRA)
+                ───────────────►  Stage 2: AI Judge
+                                    --backend api  → Ollama/vLLM/OpenAI/any OpenAI-compatible
+                                    --backend mlx  → Local mlx-lm (Detect 0.6B×6 → Route → Judge 8B)
                 ◄───────────────
               BLOCKED or BYPASSED?
 ```
@@ -47,14 +48,23 @@ Create a JSON file in `attacks/` following this format:
 ### 2. Run the Evaluator
 
 ```bash
-# Test against Stage 1 (AgentGuard proxy)
+# Stage 1 only (requires AgentGuard running on :10180)
 python eval/run_attacks.py --target stage1
 
-# Test against Stage 2 (mlx-lm, requires Apple Silicon + pip install mlx-lm)
-python eval/run_attacks.py --target stage2
+# Stage 2 via Ollama (default)
+python eval/run_attacks.py --target stage2 --backend api --model qwen3:8b
 
-# Test against both
-python eval/run_attacks.py --target all
+# Stage 2 via vLLM
+python eval/run_attacks.py --target stage2 --backend api --api-url http://localhost:8000/v1 --model Qwen/Qwen3-8B
+
+# Stage 2 via OpenAI API
+python eval/run_attacks.py --target stage2 --backend api --api-url https://api.openai.com/v1 --model gpt-4o --api-key $OPENAI_API_KEY
+
+# Stage 2 via local mlx-lm (Apple Silicon only)
+python eval/run_attacks.py --target stage2 --backend mlx
+
+# Both stages
+python eval/run_attacks.py --target all --backend api
 ```
 
 ### 3. Check Results
