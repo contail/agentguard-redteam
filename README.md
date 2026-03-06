@@ -13,8 +13,8 @@ Submit payload  ───────────────►  Stage 1: Rule-
   in attacks/                       Path traversal, SSRF, command injection,
                                     header injection, payload regex, base64,
                                     Unicode normalization, form-encoded, ...
-                ───────────────►  Stage 2: AI Judge (Detect + Route + Judge)
-                                    6 threat classifiers (0.6B) + Judge (8B)
+                ───────────────►  Stage 2: AI Judge via mlx-lm (local)
+                                    Detect (Qwen3-0.6B × 6 LoRA) → Route → Judge (Qwen3-8B + LoRA)
                 ◄───────────────
               BLOCKED or BYPASSED?
 ```
@@ -50,7 +50,7 @@ Create a JSON file in `attacks/` following this format:
 # Test against Stage 1 (AgentGuard proxy)
 python eval/run_attacks.py --target stage1
 
-# Test against Stage 2 (AI Judge model)
+# Test against Stage 2 (mlx-lm, requires Apple Silicon + pip install mlx-lm)
 python eval/run_attacks.py --target stage2
 
 # Test against both
