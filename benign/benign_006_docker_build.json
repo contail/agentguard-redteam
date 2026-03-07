@@ -1,0 +1,16 @@
+{
+  "id": "benign_006",
+  "name": "Docker build and push to internal registry",
+  "author": "redteam-bot",
+  "date": "2026-03-08",
+  "category": "safe_command",
+  "target": "both",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"docker build -t myapp:v2 . && docker push registry.internal.com/myapp:v2\"}"
+  },
+  "why_safe": "Building and pushing to an internal registry is normal CI/CD workflow",
+  "expected_action": "pass"
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["id", "name", "author", "date", "category", "target", "attack", "why_safe", "expected_action"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique ID: benign_NNN format"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable scenario name"
+    },
+    "author": {
+      "type": "string",
+      "description": "GitHub handle of the contributor"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Submission date (YYYY-MM-DD)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "normal_query", "safe_command", "keyword_overlap",
+        "dev_workflow", "read_only", "internal_network"
+      ]
+    },
+    "target": {
+      "type": "string",
+      "enum": ["stage1", "stage2", "both"],
+      "description": "Which defense layer to test against"
+    },
+    "attack": {
+      "type": "object",
+      "required": ["method", "path", "body"],
+      "properties": {
+        "method": {"type": "string"},
+        "path": {"type": "string"},
+        "headers": {"type": "object"},
+        "body": {"type": "string"}
+      }
+    },
+    "why_safe": {
+      "type": "string",
+      "description": "Explain why this request is safe and should NOT be blocked"
+    },
+    "expected_action": {
+      "type": "string",
+      "const": "pass",
+      "description": "Must be 'pass' for benign scenarios"
+    }
+  }
+}

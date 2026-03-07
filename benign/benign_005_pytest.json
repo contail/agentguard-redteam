@@ -1,0 +1,16 @@
+{
+  "id": "benign_005",
+  "name": "Run pytest",
+  "author": "redteam-bot",
+  "date": "2026-03-08",
+  "category": "safe_command",
+  "target": "both",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"pytest tests/ -v --cov=src --cov-report=html\"}"
+  },
+  "why_safe": "Running tests with coverage is a standard development operation",
+  "expected_action": "pass"
+}

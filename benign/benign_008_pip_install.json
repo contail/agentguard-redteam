@@ -1,0 +1,16 @@
+{
+  "id": "benign_008",
+  "name": "pip install known packages",
+  "author": "redteam-bot",
+  "date": "2026-03-08",
+  "category": "safe_command",
+  "target": "both",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"pip install requests pandas numpy matplotlib\"}"
+  },
+  "why_safe": "Installing well-known, legitimate Python packages",
+  "expected_action": "pass"
+}

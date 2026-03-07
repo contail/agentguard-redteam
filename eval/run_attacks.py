@@ -33,6 +33,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ATTACKS_DIR = REPO_ROOT / "attacks"
+BENIGN_DIR = REPO_ROOT / "benign"
 RESULTS_DIR = REPO_ROOT / "results"
 
 RED = "\033[91m"
@@ -46,7 +47,7 @@ JUDGE_SYSTEM_PROMPT_PATH = Path.home() / "trust-agent-guard-model" / "prompts" /
 
 # --- Shared helpers ---
 
-def load_attacks():
+def load_attacks(include_benign=True):
     files = sorted(ATTACKS_DIR.glob("*.json"))
     attacks = []
     for f in files:
@@ -55,9 +56,21 @@ def load_attacks():
         try:
             data = json.loads(f.read_text())
             data["_file"] = f.name
+            data["_source"] = "attack"
             attacks.append(data)
         except Exception as e:
             print(f"{RED}Error loading {f.name}: {e}{RESET}")
+
+    if include_benign and BENIGN_DIR.exists():
+        for f in sorted(BENIGN_DIR.glob("*.json")):
+            try:
+                data = json.loads(f.read_text())
+                data["_file"] = f.name
+                data["_source"] = "benign"
+                attacks.append(data)
+            except Exception as e:
+                print(f"{RED}Error loading benign/{f.name}: {e}{RESET}")
+
     return attacks
 
 
@@ -337,21 +350,41 @@ def print_scoreboard(attacks, stage1_results, stage2_results):
     print(f"{BOLD}AgentGuard Red Team Scoreboard{RESET}")
     print(f"{'=' * 60}\n")
 
-    if stage1_results:
-        ok = sum(1 for r in stage1_results.values() if r["correct"])
-        t = len(stage1_results)
-        print(f"  Stage 1 (Rules):  {ok}/{t} correct ({ok/t*100:.1f}%)")
+    # Split into attacks (should block) and benign (should pass)
+    attack_scenarios = [a for a in attacks if a["expected_action"] == "block"]
+    benign_scenarios = [a for a in attacks if a["expected_action"] == "pass"]
 
-    if stage2_results:
-        ok = sum(1 for r in stage2_results.values() if r["correct"])
-        t = len(stage2_results)
-        print(f"  Stage 2 (Judge):  {ok}/{t} correct ({ok/t*100:.1f}%)")
+    # --- Attack detection (false negatives) ---
+    if attack_scenarios:
+        print(f"  {RED}{BOLD}Attack Detection (should block):{RESET}")
+        for label, results in [("Stage 1", stage1_results), ("Stage 2", stage2_results)]:
+            tested = [a for a in attack_scenarios if a["id"] in results]
+            if tested:
+                ok = sum(1 for a in tested if results[a["id"]]["correct"])
+                t = len(tested)
+                icon = "✅" if ok == t else "⚠️" if ok / t >= 0.9 else "❌"
+                print(f"    {label}: {ok}/{t} blocked ({ok/t*100:.1f}%) {icon}")
 
-    bypasses = []
+    # --- False positive (should pass) ---
+    if benign_scenarios:
+        print(f"\n  {GREEN}{BOLD}False Positive (should pass):{RESET}")
+        for label, results in [("Stage 1", stage1_results), ("Stage 2", stage2_results)]:
+            tested = [a for a in benign_scenarios if a["id"] in results]
+            if tested:
+                ok = sum(1 for a in tested if results[a["id"]]["correct"])
+                t = len(tested)
+                icon = "✅" if ok == t else "⚠️" if ok / t >= 0.9 else "❌"
+                print(f"    {label}: {ok}/{t} passed ({ok/t*100:.1f}%) {icon}")
+
+    # --- Collect failures ---
+    bypasses = []  # attacks that got through
+    false_positives = []  # benign that got blocked
+
     for atk in attacks:
         aid = atk["id"]
         s1 = stage1_results.get(aid, {})
         s2 = stage2_results.get(aid, {})
+
         if atk["expected_action"] == "block":
             s1_bp = s1 and not s1.get("blocked", True)
             s2_bp = s2 and not s2.get("blocked", True)
@@ -361,12 +394,27 @@ def print_scoreboard(attacks, stage1_results, stage2_results):
                     "s1": "BYPASS" if s1_bp else ("BLOCK" if s1 else "-"),
                     "s2": "BYPASS" if s2_bp else ("BLOCK" if s2 else "-"),
                 })
+        elif atk["expected_action"] == "pass":
+            s1_fp = s1 and s1.get("blocked", False)
+            s2_fp = s2 and s2.get("blocked", False)
+            if s1_fp or s2_fp:
+                false_positives.append({
+                    "id": aid, "name": atk["name"],
+                    "s1": "FALSE_POS" if s1_fp else ("PASS" if s1 else "-"),
+                    "s2": "FALSE_POS" if s2_fp else ("PASS" if s2 else "-"),
+                })
 
     if bypasses:
-        print(f"\n  {RED}Bypasses:{RESET}")
+        print(f"\n  {RED}Bypasses (missed attacks):{RESET}")
         for b in bypasses:
-            print(f"    {b['id']}: {b['name']}  S1={b['s1']} S2={b['s2']}")
+            print(f"    ❌ {b['id']}: {b['name']}  S1={b['s1']} S2={b['s2']}")
 
+    if false_positives:
+        print(f"\n  {YELLOW}False Positives (safe blocked):{RESET}")
+        for fp in false_positives:
+            print(f"    ⚠️  {fp['id']}: {fp['name']}  S1={fp['s1']} S2={fp['s2']}")
+
+    # Category breakdown
     cat_stats = defaultdict(lambda: {"total": 0, "s1_ok": 0, "s2_ok": 0})
     for atk in attacks:
         cat = atk["category"]
@@ -379,7 +427,7 @@ def print_scoreboard(attacks, stage1_results, stage2_results):
     print(f"\n  Category Breakdown:")
     for cat in sorted(cat_stats):
         s = cat_stats[cat]
-        print(f"    {cat:25s}: {s['total']} attacks (S1: {s['s1_ok']}/{s['total']}, S2: {s['s2_ok']}/{s['total']})")
+        print(f"    {cat:25s}: {s['total']} total (S1: {s['s1_ok']}/{s['total']}, S2: {s['s2_ok']}/{s['total']})")
 
     authors = defaultdict(int)
     for atk in attacks:
@@ -388,7 +436,7 @@ def print_scoreboard(attacks, stage1_results, stage2_results):
     print(f"\n  Contributors: {author_str}")
     print(f"{'=' * 60}")
 
-    return bypasses
+    return {"bypasses": bypasses, "false_positives": false_positives}
 
 
 # --- Main ---
@@ -407,9 +455,11 @@ def main():
                         help="Model name for API backend")
     parser.add_argument("--api-key", default=os.environ.get("JUDGE_API_KEY", ""),
                         help="API key (if needed)")
+    parser.add_argument("--no-benign", action="store_true",
+                        help="Skip benign (false positive) tests")
     args = parser.parse_args()
 
-    attacks = load_attacks()
+    attacks = load_attacks(include_benign=not args.no_benign)
     if not attacks:
         print("No attack files found in attacks/")
         sys.exit(1)
@@ -428,7 +478,7 @@ def main():
         else:
             stage2_results = test_stage2_mlx(attacks)
 
-    bypasses = print_scoreboard(attacks, stage1_results, stage2_results)
+    failures = print_scoreboard(attacks, stage1_results, stage2_results)
 
     RESULTS_DIR.mkdir(exist_ok=True)
     results_file = RESULTS_DIR / f"run_{int(time.time())}.json"
@@ -436,10 +486,12 @@ def main():
         "timestamp": int(time.time()),
         "target": args.target,
         "backend": args.backend,
-        "total_attacks": len(attacks),
+        "total_attacks": len([a for a in attacks if a["expected_action"] == "block"]),
+        "total_benign": len([a for a in attacks if a["expected_action"] == "pass"]),
         "stage1": stage1_results,
         "stage2": stage2_results,
-        "bypasses": bypasses,
+        "bypasses": failures.get("bypasses", []),
+        "false_positives": failures.get("false_positives", []),
     }, indent=2, ensure_ascii=False))
     print(f"\nResults saved: {results_file}")
 

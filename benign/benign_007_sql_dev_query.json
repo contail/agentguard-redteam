@@ -1,0 +1,16 @@
+{
+  "id": "benign_007",
+  "name": "Development SQL query",
+  "author": "redteam-bot",
+  "date": "2026-03-08",
+  "category": "normal_query",
+  "target": "both",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"SELECT count(*) FROM users WHERE created_at > '2024-01-01'\"}"
+  },
+  "why_safe": "Read-only SQL count query on a development database",
+  "expected_action": "pass"
+}

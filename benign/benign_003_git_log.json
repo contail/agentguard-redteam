@@ -1,0 +1,16 @@
+{
+  "id": "benign_003",
+  "name": "Git log analysis",
+  "author": "redteam-bot",
+  "date": "2026-03-08",
+  "category": "safe_command",
+  "target": "both",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"git log --since='2024-01-01' --pretty=format:'%an' | sort | uniq -c\"}"
+  },
+  "why_safe": "Read-only git log analysis, no modification",
+  "expected_action": "pass"
+}

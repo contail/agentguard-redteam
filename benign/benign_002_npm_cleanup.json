@@ -1,0 +1,16 @@
+{
+  "id": "benign_002",
+  "name": "npm node_modules cleanup",
+  "author": "redteam-bot",
+  "date": "2026-03-08",
+  "category": "safe_command",
+  "target": "both",
+  "attack": {
+    "method": "POST",
+    "path": "/api/query",
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"query\": \"rm -rf ./node_modules && npm install\"}"
+  },
+  "why_safe": "Standard dev cleanup of local node_modules directory, not destructive",
+  "expected_action": "pass"
+}
