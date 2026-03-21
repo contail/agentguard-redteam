@@ -19,6 +19,20 @@ if ! command -v claude &>/dev/null; then
   exit 1
 fi
 
+# Pull latest AgentGuard and rebuild
+AGENTGUARD_REPO="$HOME/AgentGuard"
+if [ -d "$AGENTGUARD_REPO" ]; then
+  echo "Updating AgentGuard to latest main..." | tee -a "$LOG_FILE"
+  cd "$AGENTGUARD_REPO"
+  git pull origin main --ff-only 2>&1 | tee -a "$LOG_FILE" || true
+  if command -v go &>/dev/null; then
+    go build -o dist/agentguard-darwin-amd64 . 2>&1 | tee -a "$LOG_FILE" && \
+      echo "Rebuilt binary OK" | tee -a "$LOG_FILE" || \
+      echo "WARNING: Build failed, using existing binary" | tee -a "$LOG_FILE"
+  fi
+  cd "$REPO_DIR"
+fi
+
 # Start AgentGuard proxy if not running
 if ! curl -s http://localhost:10180/health &>/dev/null; then
   if [ -f "$AGENTGUARD_BIN" ]; then
