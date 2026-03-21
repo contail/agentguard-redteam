@@ -3,6 +3,7 @@
 Stage 2 backends:
   --backend api   → Any OpenAI-compatible API (Ollama, vLLM, llama.cpp, OpenAI, etc.)
   --backend mlx   → Local mlx-lm with LoRA adapters (Apple Silicon only)
+  --backend gate  → Gate API (Trust Layer /v1/guard/evaluate endpoint)
 
 Usage:
     # Stage 1 only (requires AgentGuard running on :10180)
@@ -17,8 +18,12 @@ Usage:
     # Stage 2 via local mlx-lm (Apple Silicon)
     python eval/run_attacks.py --target stage2 --backend mlx
 
+    # Stage 2 via Gate API (Trust Layer)
+    python eval/run_attacks.py --target stage2 --backend gate
+    python eval/run_attacks.py --target stage2 --backend gate --gate-url https://api.dev.tynapse.com --gate-secret my-secret
+
     # Both stages
-    python eval/run_attacks.py --target all --backend api
+    python eval/run_attacks.py --target all --backend gate
 """
 
 import argparse
@@ -63,6 +68,8 @@ def load_attacks(include_benign=True):
 
     if include_benign and BENIGN_DIR.exists():
         for f in sorted(BENIGN_DIR.glob("*.json")):
+            if f.name == "schema.json":
+                continue
             try:
                 data = json.loads(f.read_text())
                 data["_file"] = f.name
@@ -220,6 +227,72 @@ def test_stage2_api(attacks, api_url, model, api_key=None):
         icon = f"{GREEN}OK{RESET}" if correct else f"{RED}FAIL{RESET}"
         action = "BLOCKED" if blocked else "PASSED"
         print(f"  [{icon}] {atk['id']}: {action} ({threat_type}/{severity}) — {atk['name']}")
+
+    return results
+
+
+# --- Stage 2 Backend: Gate API (Trust Layer) ---
+
+def test_stage2_gate(attacks, gate_url, gate_secret):
+    stage2_attacks = [a for a in attacks if a["target"] in ("stage2", "both")]
+    if not stage2_attacks:
+        print("No Stage 2 attacks to test.")
+        return {}
+
+    import urllib.request
+    import urllib.error
+
+    endpoint = f"{gate_url.rstrip('/')}/v1/guard/evaluate"
+    print(f"\n{BOLD}Stage 2 (Gate API): Testing {len(stage2_attacks)} attacks → {endpoint}{RESET}\n")
+
+    results = {}
+    for atk in stage2_attacks:
+        query = extract_query(atk)
+        payload = json.dumps({"query": query}).encode()
+
+        try:
+            req = urllib.request.Request(endpoint, data=payload, headers={
+                "Content-Type": "application/json",
+                "X-Guard-Secret": gate_secret,
+                "User-Agent": "AgentGuard-Eval/1.0",
+            })
+            start = time.time()
+            resp = urllib.request.urlopen(req, timeout=30)
+            latency = time.time() - start
+            result = json.loads(resp.read())
+
+            decision = result.get("decision", "UNKNOWN")
+            trust_score = result.get("trust_score", -1)
+            reasons = result.get("reasons", [])
+            blocked = decision == "BLOCK"
+            verdict = {
+                "decision": decision,
+                "trust_score": trust_score,
+                "reasons": reasons,
+                "latency_ms": round(latency * 1000),
+            }
+        except urllib.error.HTTPError as e:
+            print(f"  {YELLOW}[ERR]{RESET} {atk['id']}: HTTP {e.code}")
+            blocked, verdict = False, {"error": f"HTTP {e.code}"}
+        except Exception as e:
+            print(f"  {YELLOW}[ERR]{RESET} {atk['id']}: {e}")
+            blocked, verdict = False, {"error": str(e)}
+
+        expected_block = atk["expected_action"] == "block"
+        correct = blocked == expected_block
+        results[atk["id"]] = {
+            "blocked": blocked, "verdict": verdict,
+            "expected": atk["expected_action"], "correct": correct,
+        }
+
+        icon = f"{GREEN}OK{RESET}" if correct else f"{RED}FAIL{RESET}"
+        action = "BLOCKED" if blocked else "PASSED"
+        score_str = f"score={verdict.get('trust_score', '?')}"
+        reasons_str = ",".join(verdict.get("reasons", []))[:40]
+        lat_str = f"{verdict.get('latency_ms', '?')}ms"
+        print(f"  [{icon}] {atk['id']}: {action} ({score_str} {lat_str}) — {atk['name']}")
+
+        time.sleep(1)  # rate limit
 
     return results
 
@@ -445,8 +518,12 @@ def main():
     parser = argparse.ArgumentParser(description="Run red team attacks against AgentGuard")
     parser.add_argument("--target", choices=["stage1", "stage2", "all"], default="all",
                         help="Which defense layer to test")
-    parser.add_argument("--backend", choices=["api", "mlx"], default="api",
-                        help="Stage 2 backend: 'api' (OpenAI-compatible) or 'mlx' (local mlx-lm)")
+    parser.add_argument("--backend", choices=["api", "mlx", "gate"], default="gate",
+                        help="Stage 2 backend: 'api' (OpenAI-compatible), 'mlx' (local mlx-lm), or 'gate' (Trust Layer)")
+    parser.add_argument("--gate-url", default=os.environ.get("GATE_URL", "https://api.dev.tynapse.com"),
+                        help="Gate API base URL for gate backend")
+    parser.add_argument("--gate-secret", default=os.environ.get("GATE_SECRET", "dev-guard-secret"),
+                        help="Guard secret for Gate API")
     parser.add_argument("--proxy-url", default="http://localhost:10180",
                         help="AgentGuard proxy URL for Stage 1")
     parser.add_argument("--api-url", default=os.environ.get("JUDGE_API_URL", "http://localhost:11434/v1"),
@@ -473,7 +550,9 @@ def main():
         stage1_results = test_stage1(attacks, args.proxy_url)
 
     if args.target in ("stage2", "all"):
-        if args.backend == "api":
+        if args.backend == "gate":
+            stage2_results = test_stage2_gate(attacks, args.gate_url, args.gate_secret)
+        elif args.backend == "api":
             stage2_results = test_stage2_api(attacks, args.api_url, args.model, args.api_key or None)
         else:
             stage2_results = test_stage2_mlx(attacks)

@@ -8,11 +8,7 @@ Run the existing attack + benign scenarios against the live AgentGuard proxy:
 
 ```bash
 cd ~/agentguard-redteam
-python eval/run_attacks.py --target all --backend api \
-  --proxy-url http://localhost:10180 \
-  --api-url https://api.dev.tynapse.com/v1 \
-  --model guard-judge \
-  --api-key tgk_gPG3p0CNjF7EHA9ZTFJBc5tgzUFVilKlrWAZack6LyM
+python eval/run_attacks.py --target all --backend gate --proxy-url http://localhost:10180
 ```
 
 Save the output. Note any bypasses (attacks that got through) and false positives (safe requests that got blocked).
