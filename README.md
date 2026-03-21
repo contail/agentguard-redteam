@@ -2,7 +2,7 @@
 
 **Can you bypass AgentGuard's defenses?**
 
-AgentGuard is an AI agent firewall that blocks malicious requests through an 11-layer defense pipeline. This repo is an open adversarial testing ground — submit attack payloads and see if they get through.
+AgentGuard is an AI agent firewall that blocks malicious requests through a two-stage defense pipeline. This repo is an open adversarial testing ground — submit attack payloads and see if they get through.
 
 ## How It Works
 
@@ -14,8 +14,9 @@ Submit payload  ───────────────►  Stage 1: Rule-
                                     header injection, payload regex, base64,
                                     Unicode normalization, form-encoded, ...
                 ───────────────►  Stage 2: AI Judge
-                                    --backend api  → Ollama/vLLM/OpenAI/any OpenAI-compatible
-                                    --backend mlx  → Local mlx-lm (Detect 0.6B×6 → Route → Judge 8B)
+                                    --backend gate → Trust Layer Gate API
+                                    --backend api  → Ollama/vLLM/OpenAI-compatible
+                                    --backend mlx  → Local mlx-lm (Apple Silicon)
                 ◄───────────────
               BLOCKED or BYPASSED?
 ```
@@ -51,25 +52,34 @@ Create a JSON file in `attacks/` following this format:
 # Stage 1 only (requires AgentGuard running on :10180)
 python eval/run_attacks.py --target stage1
 
-# Stage 2 via Ollama (default)
+# Stage 2 via Gate API (default, no local model needed)
+python eval/run_attacks.py --target stage2 --backend gate
+
+# Stage 2 via Ollama
 python eval/run_attacks.py --target stage2 --backend api --model qwen3:8b
 
 # Stage 2 via vLLM
 python eval/run_attacks.py --target stage2 --backend api --api-url http://localhost:8000/v1 --model Qwen/Qwen3-8B
 
-# Stage 2 via OpenAI API
-python eval/run_attacks.py --target stage2 --backend api --api-url https://api.openai.com/v1 --model gpt-4o --api-key $OPENAI_API_KEY
-
 # Stage 2 via local mlx-lm (Apple Silicon only)
 python eval/run_attacks.py --target stage2 --backend mlx
 
-# Both stages
-python eval/run_attacks.py --target all --backend api
+# Both stages (recommended)
+python eval/run_attacks.py --target all --backend gate
 ```
 
 ### 3. Check Results
 
 Results are saved to `results/` with a scoreboard showing which attacks bypassed which stage.
+
+### 4. Dashboard
+
+```bash
+python dashboard/server.py
+# Opens http://localhost:8900
+```
+
+Real-time dashboard showing detection rates, per-category breakdown, run history, and scheduler status.
 
 ## Attack Categories
 
@@ -88,6 +98,38 @@ Results are saved to `results/` with a scoreboard showing which attacks bypassed
 | `privilege_escalation` | sudoers, SUID, wildcard perms | - | Detect + Judge |
 | `social_engineering` | Authority claims, urgency | - | Judge |
 
+## Benign (False Positive) Tests
+
+Files in `benign/` are safe requests that overlap with attack patterns. These test that AgentGuard doesn't block legitimate developer workflows:
+
+- Korean weather question, README read, coding questions
+- `rm -rf ./node_modules`, `pip install`, `kubectl apply`, `docker build`
+- SQL SELECT queries, API gateway configuration questions
+
+Expected action: `"pass"`. Any block = false positive.
+
+## Automated Red Team Cycle
+
+A macOS LaunchAgent runs a full attack/defense cycle every 6 hours:
+
+1. Pull latest AgentGuard and rebuild binary
+2. Start proxy, run all attacks + benign tests
+3. Generate 2 new attack variations + 1 new benign scenario (via Claude Code)
+4. Commit results and new scenarios, create PR
+5. If bypasses found, create defense PRs on related repos
+
+```bash
+# Manual run
+./scheduler/run_cycle.sh
+
+# LaunchAgent (auto, every 6 hours)
+cp scheduler/com.agentguard.redteam.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.agentguard.redteam.plist
+
+# Check logs
+cat /tmp/redteam-cycle-*.log
+```
+
 ## Rules
 
 1. **One attack per file** — each JSON file in `attacks/` is a single attack scenario
@@ -95,24 +137,6 @@ Results are saved to `results/` with a scoreboard showing which attacks bypassed
 3. **No DoS** — compression bombs, infinite loops, or resource exhaustion attacks are out of scope
 4. **Responsible disclosure** — if you find a bypass that works against the latest AgentGuard, open a PR here (not a public issue on the main repo)
 5. **Fair game** — Unicode tricks, encoding chains, semantic attacks, multi-step chains, social engineering, prompt injection — all welcome
-
-## Scoreboard
-
-Run `python eval/scoreboard.py` to generate the current scoreboard:
-
-```
-AgentGuard Red Team Scoreboard
-══════════════════════════════════════════════════════
-Stage 1 (Rules):  42/45 blocked (93.3%)
-Stage 2 (Judge):  38/45 blocked (84.4%)
-Combined:         44/45 blocked (97.8%)
-
-Top Bypasses:
-  attacker1_003: MCP description injection    → Stage 1: PASS, Stage 2: PASS
-  attacker2_007: Multi-step credential chain  → Stage 1: PASS, Stage 2: PASS
-
-Contributors: @attacker1 (12), @attacker2 (8), @attacker3 (5)
-```
 
 ## Contributing
 
@@ -130,12 +154,20 @@ When AgentGuard patches a bypass found here, the attack file gets a `patched` fi
 ```json
 {
   "patched": {
-    "version": "1.2.0",
-    "date": "2026-03-10",
-    "fix": "Added ideographic space normalization in Stage 1"
+    "version": "0.1.6",
+    "date": "2026-03-22",
+    "fix": "Added safe command allowlist in Stage 1"
   }
 }
 ```
+
+## Related Repos
+
+| Repo | Role |
+|------|------|
+| [contail/AgentGuard](https://github.com/contail/AgentGuard) | Stage 1 defense rules (Go) |
+| [contail/trust-agent-guard-model](https://github.com/contail/trust-agent-guard-model) | Stage 2 ML models (Qwen3 LoRA) |
+| [Tynapse/tynapse-trust-layer](https://github.com/Tynapse/tynapse-trust-layer) | Gate API serving infrastructure |
 
 ## License
 
