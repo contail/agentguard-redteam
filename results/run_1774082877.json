@@ -1,0 +1,84 @@
+{
+  "timestamp": 1774082877,
+  "target": "stage1",
+  "backend": "api",
+  "total_attacks": 20,
+  "total_benign": 0,
+  "stage1": {
+    "attack_006": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_007": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_008": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_009": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_010": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_011": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_012": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_013": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_016": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "attack_019": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "example_001": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    },
+    "example_002": {
+      "blocked": true,
+      "status_code": 403,
+      "expected": "block",
+      "correct": true
+    }
+  },
+  "stage2": {},
+  "bypasses": [],
+  "false_positives": []
+}
