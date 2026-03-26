@@ -68,6 +68,25 @@ python eval/run_attacks.py --target stage2 --backend mlx
 python eval/run_attacks.py --target all --backend gate
 ```
 
+### 2b. E2E Evaluation (Paper)
+
+Run the full 70-case evaluation set through the AgentGuard proxy for paper-grade results:
+
+```bash
+# Requires: AgentGuard running on :10180, Trust Layer API reachable
+python eval/run_e2e_eval.py
+
+# Custom test file or proxy
+python eval/run_e2e_eval.py --test-file ~/trust-agent-guard-model/prompts/test_cases_v5.json
+python eval/run_e2e_eval.py --proxy-url http://localhost:10180
+python eval/run_e2e_eval.py --output results/e2e_v5_rank128.json
+```
+
+This sends all 70 test cases (18 benign + 52 attack/config) through the full pipeline:
+Stage 1 (rule engine) → Stage 2 (detect-route-judge via Trust Layer) → PASS/BLOCK.
+
+Results are saved as JSON with per-category breakdown, FP/FN analysis, and latency stats.
+
 ### 3. Check Results
 
 Results are saved to `results/` with a scoreboard showing which attacks bypassed which stage.

@@ -15,11 +15,20 @@ scheduler/  — Automated cycle (Claude Code headless + cron)
 ## E2E Pipeline
 
 ```
-Attack payload → AgentGuard Proxy (Stage 1: 11 rules) → Gate API / Trust Layer (Stage 2: Judge) → BLOCKED or PASSED
+Attack payload → AgentGuard Proxy (Stage 1: 11 rules) → Gate API / Trust Layer (Stage 2: Detect → Route → Judge) → BLOCKED or PASSED
 ```
 
 - Stage 1: localhost:10180 (AgentGuard proxy)
 - Stage 2: https://api.dev.tynapse.com/v1/guard/evaluate (Trust Layer Gate API)
+- Detect: Qwen3-0.6B × 7 LoRA rank 128 (vLLM :8002)
+- Judge: Qwen3-14B LoRA (vLLM :8001)
+
+## Eval Scripts
+
+- `eval/run_attacks.py` — Stage 1/2 개별 테스트 (attack/benign JSON 형식)
+- `eval/run_e2e_eval.py` — 논문용 E2E eval (test_cases_v5.json 70건, AgentGuard 프록시 경유)
+- `eval/scoreboard.py` — 결과 요약
+- `eval/validate.py` — JSON 스키마 검증
 
 ## JSON Schema
 
